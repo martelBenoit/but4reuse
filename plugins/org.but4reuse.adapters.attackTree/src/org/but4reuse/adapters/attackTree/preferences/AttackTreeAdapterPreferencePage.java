@@ -9,7 +9,7 @@ import org.eclipse.ui.IWorkbenchPreferencePage;
 /**
  * Preference page for attack adapter
  * 
- * @author MARTEL Benoit, NAVEAU Simon, TRAVAILLE Loïc
+ * @author MARTEL Benoit, NAVEAU Simon, TRAVAILLE Loic
  */
 public class AttackTreeAdapterPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
 

@@ -1,6 +1,7 @@
 package org.but4reuse.adapters.attackTree;
 
 import java.io.BufferedInputStream;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -24,6 +25,39 @@ import com.tinkerpop.blueprints.util.io.gml.GMLReader;
 import com.tinkerpop.blueprints.util.io.graphml.GraphMLReader;
 import com.tinkerpop.blueprints.util.io.graphml.GraphMLWriter;
 
+import org.w3c.dom.*;
+import org.xml.sax.SAXException;
+
+import javax.xml.parsers.*;
+import java.io.*;
+
+
+/**
+ * EXEMPLE XML D'UN ARBRE D'ATTAQUE
+ * <attack name="Cause physical harm to human beings or property">
+    <operator type="OR">
+        <attack name="Circumvent safety features">
+            <operator type="OR">
+                <attack name="Spoof sensor data"></attack>
+                <attack name="Exploit weakness in software"></attack>
+                <attack name="Modify firmware"></attack>
+            </operator>
+        </attack>
+        <attack name="Cause damage">
+            <operator type="OR">
+                <attack name="Induce collision"></attack>
+                <attack name="Trigger action">     
+                    <operator type="OR">
+                        <attack name="Impersonate operator"></attack>
+                        <attack name="Take advantage of behavior"></attack>
+                    </operator>
+                </attack>
+            </operator>
+        </attack>
+    </operator>
+</attack>
+ */
+
 /**
  * Attack Tree Adapter
  * 
@@ -32,13 +66,13 @@ import com.tinkerpop.blueprints.util.io.graphml.GraphMLWriter;
 public class AttackTreeAdapter implements IAdapter {
 
 	/**
-	 * is a graphml file?
+	 * is a xml file ?
 	 */
 	@Override
 	public boolean isAdaptable(URI uri, IProgressMonitor monitor) {
 		File file = FileUtils.getFile(uri);
 		if (file != null && file.exists() && !file.isDirectory()
-				&& (FileUtils.isExtension(file, "graphml") || FileUtils.isExtension(file, "gml"))) {
+				&& FileUtils.isExtension(file, "xml") ) {
 			return true;
 		}
 		return false;
@@ -51,50 +85,34 @@ public class AttackTreeAdapter implements IAdapter {
 	public List<IElement> adapt(URI uri, IProgressMonitor monitor) {
 		List<IElement> elements = new ArrayList<IElement>();
 		File file = FileUtils.getFile(uri);
-		Graph graph = new TinkerGraph();
+
 		// Read the graph
-		// TODO show error to user for malformed files
-		if (FileUtils.isExtension(file, "graphml")) {
-			GraphMLReader reader = new GraphMLReader(graph);
-			InputStream is;
-			try {
-				is = new BufferedInputStream(new FileInputStream(file));
-				reader.inputGraph(is);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		} else if (FileUtils.isExtension(file, "gml")) {
-			GMLReader reader = new GMLReader(graph);
-			InputStream is;
-			try {
-				is = new BufferedInputStream(new FileInputStream(file));
-				reader.inputGraph(is);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
+		
+		
+		try {
+			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+			DocumentBuilder builder = factory.newDocumentBuilder();
+			Document document = builder.parse(file);
+			
+			document.getDocumentElement().normalize();
+			
+			Element attack = document.getDocumentElement();
+			AttackElement rootAttack = new AttackElement(attack.getAttribute("name"));
+			
+			NodeList attackNodes = attack.getChildNodes();
+			int nbAttackNodes = attackNodes.getLength();
+			
 
-		// Create elements
-		HashMap<Vertex, VertexElement> map = new HashMap<Vertex, VertexElement>();
-		Iterable<Vertex> vertices = graph.getVertices();
-		for (Vertex vertex : vertices) {
-			VertexElement v = new VertexElement();
-			v.setVertex(vertex);
-			elements.add(v);
-			map.put(vertex, v);
+			
+		} catch (SAXException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ParserConfigurationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-
-		Iterable<Edge> edges = graph.getEdges();
-		for (Edge edge : edges) {
-			EdgeElement e = new EdgeElement();
-			e.setEdge(edge);
-			elements.add(e);
-			// Add dependencies
-			Vertex from = edge.getVertex(Direction.OUT);
-			e.addDependency("from", map.get(from));
-			Vertex to = edge.getVertex(Direction.IN);
-			e.addDependency("to", map.get(to));
-		}
+		
+	
 
 		return elements;
 	}
@@ -172,5 +190,6 @@ public class AttackTreeAdapter implements IAdapter {
 			e.printStackTrace();
 		}
 	}
+	
 
 }
