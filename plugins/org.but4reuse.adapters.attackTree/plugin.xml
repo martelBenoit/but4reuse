@@ -9,26 +9,11 @@
             name="AttackTree">
          <elements>
             <element
-                  element="org.but4reuse.adapters.attackTree.EdgeElement"></element>
+                  element="org.but4reuse.adapters.attackTree.Attack"></element>
             <element
-                  element="org.but4reuse.adapters.attackTree.VertexElement">
+                  element="org.but4reuse.adapters.attackTree.Operator">
             </element>
          </elements>
       </adapter>
-   </extension>
-   <extension
-         point="org.eclipse.ui.preferencePages">
-      <page
-            category="org.but4reuse.adapters.ui.preferences.AdaptersPreferencePage"
-            class="org.but4reuse.adapters.attackTree.preferences.AttackTreeAdapterPreferencePage"
-            id="org.but4reuse.adapters.attackTree.page"
-            name="AttackTree">
-      </page>
-   </extension>
-   <extension
-         point="org.eclipse.core.runtime.preferences">
-      <initializer
-            class="org.but4reuse.adapters.attackTree.preferences.PreferenceInitializer">
-      </initializer>
    </extension>
 </plugin>

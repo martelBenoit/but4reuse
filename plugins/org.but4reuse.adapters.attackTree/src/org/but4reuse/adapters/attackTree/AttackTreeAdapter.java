@@ -1,18 +1,18 @@
 package org.but4reuse.adapters.attackTree;
 
-import java.io.BufferedInputStream;
-
 import java.io.File;
-import java.io.FileInputStream;
+
 import java.io.IOException;
-import java.io.InputStream;
+
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.HashMap;
+
 import java.util.List;
+
 
 import org.but4reuse.adapters.IAdapter;
 import org.but4reuse.adapters.IElement;
+import org.but4reuse.adapters.impl.AbstractElement;
 import org.but4reuse.utils.files.FileUtils;
 import org.eclipse.core.runtime.IProgressMonitor;
 
@@ -29,34 +29,8 @@ import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.*;
-import java.io.*;
 
 
-/**
- * EXEMPLE XML D'UN ARBRE D'ATTAQUE
- * <attack name="Cause physical harm to human beings or property">
-    <operator type="OR">
-        <attack name="Circumvent safety features">
-            <operator type="OR">
-                <attack name="Spoof sensor data"></attack>
-                <attack name="Exploit weakness in software"></attack>
-                <attack name="Modify firmware"></attack>
-            </operator>
-        </attack>
-        <attack name="Cause damage">
-            <operator type="OR">
-                <attack name="Induce collision"></attack>
-                <attack name="Trigger action">     
-                    <operator type="OR">
-                        <attack name="Impersonate operator"></attack>
-                        <attack name="Take advantage of behavior"></attack>
-                    </operator>
-                </attack>
-            </operator>
-        </attack>
-    </operator>
-</attack>
- */
 
 /**
  * Attack Tree Adapter
@@ -88,38 +62,37 @@ public class AttackTreeAdapter implements IAdapter {
 
 		// Read the graph
 		
-		
 		try {
+			
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-			DocumentBuilder builder = factory.newDocumentBuilder();
+			DocumentBuilder builder;
+			builder = factory.newDocumentBuilder();
+			
 			Document document = builder.parse(file);
+			Element root = document.getDocumentElement();
 			
-			document.getDocumentElement().normalize();
+			Attack attack = convertTree(root);
+			elements = attack.getAllSubElements();
 			
-			Element attack = document.getDocumentElement();
-			AttackElement rootAttack = new AttackElement(attack.getAttribute("name"));
-			
-			NodeList attackNodes = attack.getChildNodes();
-			int nbAttackNodes = attackNodes.getLength();
-			
-
-			
-		} catch (SAXException | IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (ParserConfigurationException e) {
-			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+		}
+		catch (SAXException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		
-	
-
+		
 		return elements;
 	}
 
 	@Override
 	public void construct(URI uri, List<IElement> elements, IProgressMonitor monitor) {
-
+/**
 		// Create graph
 		Graph graph = new TinkerGraph();
 
@@ -189,7 +162,82 @@ public class AttackTreeAdapter implements IAdapter {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+			*/
 	}
 	
+	private Attack convertTree(Element root) throws Exception {
+		
+		 NodeList list = root.getChildNodes();
+	        ArrayList<ArrayList<AbstractElement>> array;
+	        ArrayList<Operator> operators = new ArrayList<>();
+	        ArrayList<Attack> attacks = new ArrayList<>();
+	        for (int temp = 0; temp < list.getLength(); temp++) {
+	            Node node = list.item(temp);
+	            if (node.getNodeType() == Node.ELEMENT_NODE) {
+	                Element tmpE = (Element) node;
+	                if (node.getNodeName().equals("operator")) {
+	                    array = this.getChildren(node);
+//	                    System.out.println("Operator: "+tmpE.getAttribute("type")+" / "+array.get(1).size()+ "attacks");
+	                    Operator op = new Operator(getTypeFromString(tmpE.getAttribute("type")), array.get(1));
+	                    operators.add(op);
+	                } else if (node.getNodeName().equals("attack")) {
+	                    array = this.getChildren(node);
+//	                    System.out.println("Attack: "+tmpE.getAttribute("name")+" / "+array.get(0).size()+ "operators and "+array.get(1).size()+" attacks");
+	                    Attack at = new Attack(tmpE.getAttribute("name"), array.get(0), array.get(1));
+	                    attacks.add(at);
+	                }
+	            }
+	        }
+	        return new Attack(root.getAttribute("name"), operators, attacks);
+	}
+	
+    private ArrayList<ArrayList<AbstractElement>> getChildren(Node n) throws Exception {
+        NodeList list = n.getChildNodes();
+        ArrayList<ArrayList<AbstractElement>> array;
+        ArrayList<AbstractElement> operators = new ArrayList<>();
+        ArrayList<AbstractElement> attacks = new ArrayList<>();
+        for (int temp = 0; temp < list.getLength(); temp++) {
+            Node node = list.item(temp);
+            array = this.getChildren(node);
+            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                Element tmpE = (Element) node;
+                if (node.getNodeName().equals("operator")) {
+//                    System.out.println("Operator: "+tmpE.getAttribute("type")+" / "+array.get(1).size()+ "attacks");    
+                    Operator op = new Operator(getTypeFromString(tmpE.getAttribute("type")), array.get(1));
+                    operators.add(op);
+                } else if (node.getNodeName().equals("attack")) {
+//                    System.out.println("Attack: "+tmpE.getAttribute("name")+" / "+array.get(0).size()+ "operators and "+array.get(1).size()+" attacks");
+                    Attack at = new Attack(tmpE.getAttribute("name"), array.get(0), array.get(1));
+                    attacks.add(at);
+                }
+            }
+        }
+        ArrayList<ArrayList<AbstractElement>> ret = new ArrayList<>();
+        ret.add(operators);
+        ret.add(attacks);
+        return ret;
+    }
+    
+    /**
+     * Get the TYPE from the OperatorType enumeration corresponding to the string given in parameter
+     * @param type the string corresponding to a OperatorType
+     * @return the requested OperatorType
+     * @throws Exception Throw an exception if the operator is not in the OperatorType enumeration
+     */
+    private static OperatorType getTypeFromString(String type) throws Exception {
+        switch (type) {
+            case "OR":
+                return OperatorType.OR;
+            case "AND":
+                return OperatorType.AND;
+            case "NOR":
+                return OperatorType.NOR;
+            case "XOR":
+                return OperatorType.XOR;
+            default:
+                throw new Exception("This type " + type + " is not referenced");
+        }
+    }
+    
 
 }
