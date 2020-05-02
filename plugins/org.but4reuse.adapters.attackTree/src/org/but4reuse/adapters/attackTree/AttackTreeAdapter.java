@@ -1,9 +1,10 @@
 package org.but4reuse.adapters.attackTree;
 
+import java.io.BufferedInputStream;
 import java.io.File;
-
+import java.io.FileInputStream;
 import java.io.IOException;
-
+import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
 
@@ -19,7 +20,15 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
+import com.tinkerpop.blueprints.util.io.graphml.GraphMLReader;
+
 import javax.xml.parsers.*;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
 
 /**
@@ -28,6 +37,7 @@ import javax.xml.parsers.*;
  * @author MARTEL Benoit, NAVEAU Simon, TRAVAILLE Loïc
  */
 public class AttackTreeAdapter implements IAdapter {
+	
 
 	/**
 	 * is a xml file ?
@@ -86,78 +96,112 @@ public class AttackTreeAdapter implements IAdapter {
 
 	@Override
 	public void construct(URI uri, List<IElement> elements, IProgressMonitor monitor) {
-/**
-		// Create graph
-		Graph graph = new TinkerGraph();
-
-		// Add vertices
-		for (IElement element : elements) {
-			if (element instanceof VertexElement) {
-				VertexElement ve = (VertexElement) element;
-				Vertex v = graph.addVertex(ve.getVertex().getId());
-				// adding all its properties
-				for (String key : ve.getVertex().getPropertyKeys()) {
-					v.setProperty(key, ve.getVertex().getProperty(key));
-				}
-			}
+		
+		for(IElement e : elements) {
+			System.out.println(e);
 		}
-
-		// Add edges
-		// We create link vertices when they do not exist in the graph but the
-		// edge reference to it
-		int idEdge = 1;
-		int linkVertex = 0;
-		for (IElement element : elements) {
-			if (element instanceof EdgeElement) {
-				EdgeElement ee = (EdgeElement) element;
-				Vertex targetVertex = ee.getEdge().getVertex(Direction.IN);
-				Vertex sourceVertex = ee.getEdge().getVertex(Direction.OUT);
-				// If they dont exist, create fake ones
-				if (graph.getVertex(targetVertex.getId()) == null) {
-					targetVertex = graph.addVertex("link vertex " + linkVertex);
-					targetVertex.setProperty("label", targetVertex.getId());
-					linkVertex++;
-				} else {
-					// get the current object in the graph
-					targetVertex = graph.getVertex(targetVertex.getId());
-				}
-				if (graph.getVertex(sourceVertex.getId()) == null) {
-					sourceVertex = graph.addVertex("link vertex " + linkVertex);
-					sourceVertex.setProperty("label", sourceVertex.getId());
-					linkVertex++;
-				} else {
-					// get the current object in the graph
-					sourceVertex = graph.getVertex(sourceVertex.getId());
-				}
-
-				Edge edge = graph.addEdge(idEdge, sourceVertex, targetVertex, ee.getEdge().getLabel());
-				idEdge++;
-				// adding all its properties
-				for (String key : ee.getEdge().getPropertyKeys()) {
-					edge.setProperty(key, ee.getEdge().getProperty(key));
-				}
-			}
-		}
-
-		// Save
-		GraphMLWriter writer = new GraphMLWriter(graph);
-		writer.setNormalize(true);
-
+		
+		
+		Attack attack = (Attack) elements.get(1);
+		System.out.println("ROOT = "+attack);
 		try {
-			// Use the given file or use a default name if a folder was given
+			
+			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+			DocumentBuilder builder;
+			builder = factory.newDocumentBuilder();
+			Document document = builder.newDocument();
+	
+	        //Creating the root element
+	        Element root = document.createElement("attack");
+	        root.setAttribute("name", attack.getName());
+	        document.appendChild(root);
+	        
+	        for(Attack a : attack.getAttackChildren()) {
+	        	  Element at = document.createElement("attack");
+		            at.setAttribute("name", a.getName());
+		            root.appendChild(at);
+		            for(Operator o : attack.getOperatorChildren()) {
+		            	addChildToXML(o,at,document);
+		            }
+	            	for(Attack a2 : attack.getAttackChildren()) {
+		            	addChildToXML(a2,at,document);
+		            }
+		         
+	        }
+	        
+	        for(Operator o : attack.getOperatorChildren()) {
+	        	  Element operator = document.createElement("operator");
+	        	  operator.setAttribute("type", "" + o.type);
+		            root.appendChild(operator);
+		            for(Operator op : attack.getOperatorChildren()) {
+		            	addChildToXML(op,operator,document);
+		            }
+	            	
+		         
+	        }
+	        
+	    	// Use the given file or use a default name if a folder was given
 			if (uri.toString().endsWith("/")) {
-				uri = new URI(uri.toString() + "attackTree.graphml");
+				uri = new URI(uri.toString() + "graph.xml");
+				System.out.println("add path");
 			}
 			// Create file if it does not exist
 			File file = FileUtils.getFile(uri);
 			FileUtils.createFile(file);
+	
 
-			writer.outputGraph(file.getAbsolutePath());
-		} catch (Exception e) {
+	
+	        Transformer transformer = TransformerFactory.newInstance().newTransformer();
+	        DOMSource source = new DOMSource(document);
+	        StreamResult sortie = new StreamResult(file);
+	        transformer.setOutputProperty(OutputKeys.VERSION, "1.0");
+	        transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+	        transformer.setOutputProperty(OutputKeys.STANDALONE, "yes");
+	        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+	        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+	        transformer.transform(source, sortie);
+		}
+		catch(TransformerException e) {
 			e.printStackTrace();
 		}
-			*/
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+		
+		
+		
+		
+
 	}
+	
+	 /**
+     * Add the children of an element as child to him recursively to create an attack Tree as XML
+     * 
+     * @param element the element to add
+     * @param father the father of the element
+     * @param doc the XML document builder
+     */
+    private void addChildToXML(AbstractElement element, Element father, Document doc) {
+        if (element.getClass() == Attack.class) {
+            Element attack = doc.createElement("attack");
+            attack.setAttribute("name", ((Attack) element).getName());
+            father.appendChild(attack);
+            for(Operator o : ((Attack) element).getOperatorChildren()) {
+            	addChildToXML(o,attack,doc);
+            }
+            for(Attack a : ((Attack) element).getAttackChildren()) {
+            	addChildToXML(a,attack,doc);
+            }
+          
+        } else {
+            Element operator = doc.createElement("operator");
+            operator.setAttribute("type", "" + ((Operator) element).type);
+            father.appendChild(operator);
+            for(Attack a : ((Operator) element).getChildren()) {
+            	addChildToXML(a,operator,doc);
+            }
+        }
+    }
 	
 	private Attack convertTree(Element root) throws Exception {
 		

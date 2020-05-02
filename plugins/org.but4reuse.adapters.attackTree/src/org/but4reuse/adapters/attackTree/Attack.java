@@ -15,17 +15,17 @@ public class Attack extends AbstractElement{
     /**
      * The name of the attack
      */
-    public String name;
+    private String name;
 
     /**
      * The list of the operators in the attack
      */
-    public ArrayList<Operator> operatorChildren;
+    private ArrayList<Operator> operatorChildren;
 
     /**
      * The list of the subAttacks composing this attack
      */
-    public ArrayList<Attack> attackChildren;
+    private ArrayList<Attack> attackChildren;
 
     /**
      * Constructor of the class
