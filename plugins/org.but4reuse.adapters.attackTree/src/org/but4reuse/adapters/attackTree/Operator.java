@@ -29,7 +29,7 @@ public class Operator extends AbstractElement {
      * @param children the operation's operands
      * @throws Exception
      */
-    public Operator(OperatorType type, ArrayList children){
+    public Operator(OperatorType type, ArrayList<Attack> children){
         this.type = type;
         this.children = children;
     }

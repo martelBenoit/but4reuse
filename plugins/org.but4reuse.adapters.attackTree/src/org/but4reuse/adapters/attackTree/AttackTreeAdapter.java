@@ -16,20 +16,10 @@ import org.but4reuse.adapters.impl.AbstractElement;
 import org.but4reuse.utils.files.FileUtils;
 import org.eclipse.core.runtime.IProgressMonitor;
 
-import com.tinkerpop.blueprints.Direction;
-import com.tinkerpop.blueprints.Edge;
-import com.tinkerpop.blueprints.Graph;
-import com.tinkerpop.blueprints.Vertex;
-import com.tinkerpop.blueprints.impls.tg.TinkerGraph;
-import com.tinkerpop.blueprints.util.io.gml.GMLReader;
-import com.tinkerpop.blueprints.util.io.graphml.GraphMLReader;
-import com.tinkerpop.blueprints.util.io.graphml.GraphMLWriter;
-
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.*;
-
 
 
 /**
@@ -73,6 +63,10 @@ public class AttackTreeAdapter implements IAdapter {
 			
 			Attack attack = convertTree(root);
 			elements = attack.getAllSubElements();
+			
+			for(IElement e : elements) {
+				System.out.println(e);
+			}
 			
 		} catch (ParserConfigurationException e) {
 			e.printStackTrace();
@@ -175,15 +169,35 @@ public class AttackTreeAdapter implements IAdapter {
 	            Node node = list.item(temp);
 	            if (node.getNodeType() == Node.ELEMENT_NODE) {
 	                Element tmpE = (Element) node;
+	                array = this.getChildren(node);
+	                
+                    
 	                if (node.getNodeName().equals("operator")) {
-	                    array = this.getChildren(node);
-//	                    System.out.println("Operator: "+tmpE.getAttribute("type")+" / "+array.get(1).size()+ "attacks");
-	                    Operator op = new Operator(getTypeFromString(tmpE.getAttribute("type")), array.get(1));
+	                	 ArrayList<Attack> listAttack = new ArrayList<>();
+	                     for(AbstractElement ae : array.get(1)) {
+	                     	if(ae instanceof Attack) {
+	                     		listAttack.add((Attack) ae);
+	                     	}
+	                     }
+                  
+
+	                    Operator op = new Operator(getTypeFromString(tmpE.getAttribute("type")), listAttack);
 	                    operators.add(op);
 	                } else if (node.getNodeName().equals("attack")) {
-	                    array = this.getChildren(node);
-//	                    System.out.println("Attack: "+tmpE.getAttribute("name")+" / "+array.get(0).size()+ "operators and "+array.get(1).size()+" attacks");
-	                    Attack at = new Attack(tmpE.getAttribute("name"), array.get(0), array.get(1));
+	                	
+	                	ArrayList<Operator> listOperator = new ArrayList<>();
+	                     for(AbstractElement ae : array.get(0)) {
+	                     	if(ae instanceof Operator) {
+	                     		listOperator.add((Operator) ae);
+	                     	}
+	                     }
+	                	ArrayList<Attack> listAttack = new ArrayList<>();
+	                     for(AbstractElement ae : array.get(1)) {
+	                     	if(ae instanceof Attack) {
+	                     		listAttack.add((Attack) ae);
+	                     	}
+	                     }
+                     	Attack at = new Attack(tmpE.getAttribute("name"), listOperator, listAttack);
 	                    attacks.add(at);
 	                }
 	            }
@@ -202,12 +216,32 @@ public class AttackTreeAdapter implements IAdapter {
             if (node.getNodeType() == Node.ELEMENT_NODE) {
                 Element tmpE = (Element) node;
                 if (node.getNodeName().equals("operator")) {
-//                    System.out.println("Operator: "+tmpE.getAttribute("type")+" / "+array.get(1).size()+ "attacks");    
-                    Operator op = new Operator(getTypeFromString(tmpE.getAttribute("type")), array.get(1));
+                	ArrayList<Attack> listAttack = new ArrayList<>();
+                	
+                    for(AbstractElement ae : array.get(1)) {
+                    	if(ae instanceof Attack) {
+                    		listAttack.add((Attack) ae);
+                    	}
+                    }
+                    
+                    Operator op = new Operator(getTypeFromString(tmpE.getAttribute("type")), listAttack);
                     operators.add(op);
                 } else if (node.getNodeName().equals("attack")) {
-//                    System.out.println("Attack: "+tmpE.getAttribute("name")+" / "+array.get(0).size()+ "operators and "+array.get(1).size()+" attacks");
-                    Attack at = new Attack(tmpE.getAttribute("name"), array.get(0), array.get(1));
+                	
+                 	ArrayList<Operator> listOperator = new ArrayList<>();
+                    for(AbstractElement ae : array.get(0)) {
+                     	if(ae instanceof Operator) {
+                     		listOperator.add((Operator) ae);
+                     	}
+                     }
+                	ArrayList<Attack> listAttack = new ArrayList<>();
+                     for(AbstractElement ae : array.get(1)) {
+                     	if(ae instanceof Attack) {
+                     		listAttack.add((Attack) ae);
+                     	}
+                     }
+                     
+                    Attack at = new Attack(tmpE.getAttribute("name"), listOperator, listAttack);
                     attacks.add(at);
                 }
             }
@@ -238,6 +272,7 @@ public class AttackTreeAdapter implements IAdapter {
                 throw new Exception("This type " + type + " is not referenced");
         }
     }
+    
     
 
 }

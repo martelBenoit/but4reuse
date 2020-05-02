@@ -34,7 +34,7 @@ public class Attack extends AbstractElement{
      * @param AttackChildren the attack sub attacks
      * @throws Exception
      */
-    public Attack(String name, ArrayList operatorChildren, ArrayList attackChildren) throws Exception {
+    public Attack(String name, ArrayList<Operator> operatorChildren, ArrayList<Attack> attackChildren) throws Exception {
         this.name = name;
         this.operatorChildren = operatorChildren;
         this.attackChildren = attackChildren;
@@ -66,13 +66,40 @@ public class Attack extends AbstractElement{
 		return toString();
 	}
 	
+	public ArrayList<Operator> getOperatorChildren(){
+		return this.operatorChildren;
+	}
+	
+	public ArrayList<Attack> getAttackChildren(){
+		return this.attackChildren;
+	}
+	
 	public List<IElement> getAllSubElements(){
-		List res = new ArrayList<AbstractElement>();
-		res.addAll(this.attackChildren);
-		res.addAll(this.operatorChildren);
-		return res;
+		ArrayList<IElement> elements = new ArrayList<>();
+		elements = printFromModel(this,elements);
+		System.out.println("nb total "+elements.size());
+		return elements;
 		
 	}
+	
+	 public ArrayList<IElement> printFromModel(AbstractElement element, ArrayList<IElement> elements) {
+		 elements.add(element);
+		 if (element.getClass() == Attack.class) {
+			 for(Operator o : ((Attack)element).getOperatorChildren()) {
+				 printFromModel(o,elements);
+			 }
+			 for(Attack a : ((Attack)element).getAttackChildren()) {
+				printFromModel(a,elements);
+			 }
+		 }
+		 else {
+			 for(Attack a : ((Operator)element).getChildren()) {
+				 printFromModel(a,elements);
+			 }   
+		 }
+		 return elements;
+
+	 }
 	
 	@Override
 	public boolean equals(Object obj) {
