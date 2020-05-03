@@ -21,6 +21,8 @@ public class Operator extends AbstractElement {
      * The list of the attack in the operation
      */
     public ArrayList<Attack> children;
+    
+    private AbstractElement father;
    
 
     /**
@@ -32,6 +34,18 @@ public class Operator extends AbstractElement {
     public Operator(OperatorType type, ArrayList<Attack> children){
         this.type = type;
         this.children = children;
+    }
+    
+    public void addAttackChildren(Attack attack) {
+    	this.children.add(attack);
+    }
+    
+    public void setFather(AbstractElement e) {
+    	father = e;
+    }
+    
+    public AbstractElement getFather() {
+    	return father;
     }
     
     @Override

@@ -16,6 +16,8 @@ public class Attack extends AbstractElement{
      * The name of the attack
      */
     private String name;
+    
+    private AbstractElement father;
 
     /**
      * The list of the operators in the attack
@@ -39,6 +41,13 @@ public class Attack extends AbstractElement{
         this.operatorChildren = operatorChildren;
         this.attackChildren = attackChildren;
     }
+    
+    public Attack(String name) throws Exception {
+        this.name = name;
+        this.operatorChildren = new ArrayList<Operator>();
+        this.attackChildren = new ArrayList<Attack>();
+    }
+
 
     @Override
     public String toString() {
@@ -46,6 +55,7 @@ public class Attack extends AbstractElement{
                 "name='" + name + '\'' +
                 ", OperatorChildren=" + operatorChildren.size() +
                 ", AttackChildren=" + attackChildren.size() +
+                ", father= "+father +
                 '}';
     }
 
@@ -54,6 +64,10 @@ public class Attack extends AbstractElement{
 		if(equals(anotherElement))
 			return 1;
 		return 0;
+	}
+	
+	public AbstractElement getFather() {
+		return father;
 	}
 	
 	public String getName() {
@@ -66,12 +80,24 @@ public class Attack extends AbstractElement{
 		return toString();
 	}
 	
+	public void addOperatorChildren(Operator operator) {
+		this.operatorChildren.add(operator);
+	}
+	
+	public void addAttackChildren(Attack attack) {
+		this.attackChildren.add(attack);
+	}
+	
 	public ArrayList<Operator> getOperatorChildren(){
 		return this.operatorChildren;
 	}
 	
 	public ArrayList<Attack> getAttackChildren(){
 		return this.attackChildren;
+	}
+	
+	public void setFather(AbstractElement e) {
+		this.father = e;
 	}
 	
 	public List<IElement> getAllSubElements(){

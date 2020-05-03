@@ -74,9 +74,6 @@ public class AttackTreeAdapter implements IAdapter {
 			Attack attack = convertTree(root);
 			elements = attack.getAllSubElements();
 			
-			for(IElement e : elements) {
-				System.out.println(e);
-			}
 			
 		} catch (ParserConfigurationException e) {
 			e.printStackTrace();
@@ -101,10 +98,28 @@ public class AttackTreeAdapter implements IAdapter {
 			System.out.println(e);
 		}
 		
+		Attack attack = null;
 		
-		Attack attack = (Attack) elements.get(1);
-		System.out.println("ROOT = "+attack);
+
 		try {
+			
+			// On recherche le root
+			for(IElement e : elements) {
+				if(e instanceof Attack) {
+					if (((Attack) e).getFather() == null) {
+						attack = (Attack)e;
+						elements.remove(e);
+						break;
+					}
+				}
+			}
+			
+			List<IElement> allSub = attack.getAllSubElements();
+			
+		
+			
+			System.out.println("ROOT = "+attack);
+			
 			
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder builder;
@@ -205,60 +220,76 @@ public class AttackTreeAdapter implements IAdapter {
 	
 	private Attack convertTree(Element root) throws Exception {
 		
-		 NodeList list = root.getChildNodes();
-	        ArrayList<ArrayList<AbstractElement>> array;
-	        ArrayList<Operator> operators = new ArrayList<>();
-	        ArrayList<Attack> attacks = new ArrayList<>();
-	        for (int temp = 0; temp < list.getLength(); temp++) {
-	            Node node = list.item(temp);
-	            if (node.getNodeType() == Node.ELEMENT_NODE) {
-	                Element tmpE = (Element) node;
-	                array = this.getChildren(node);
-	                
-                    
-	                if (node.getNodeName().equals("operator")) {
-	                	 ArrayList<Attack> listAttack = new ArrayList<>();
-	                     for(AbstractElement ae : array.get(1)) {
-	                     	if(ae instanceof Attack) {
-	                     		listAttack.add((Attack) ae);
-	                     	}
-	                     }
-                  
-
-	                    Operator op = new Operator(getTypeFromString(tmpE.getAttribute("type")), listAttack);
-	                    operators.add(op);
-	                } else if (node.getNodeName().equals("attack")) {
-	                	
-	                	ArrayList<Operator> listOperator = new ArrayList<>();
-	                     for(AbstractElement ae : array.get(0)) {
-	                     	if(ae instanceof Operator) {
-	                     		listOperator.add((Operator) ae);
-	                     	}
-	                     }
-	                	ArrayList<Attack> listAttack = new ArrayList<>();
-	                     for(AbstractElement ae : array.get(1)) {
-	                     	if(ae instanceof Attack) {
-	                     		listAttack.add((Attack) ae);
-	                     	}
-	                     }
-                     	Attack at = new Attack(tmpE.getAttribute("name"), listOperator, listAttack);
-	                    attacks.add(at);
-	                }
-	            }
-	        }
-	        return new Attack(root.getAttribute("name"), operators, attacks);
+		NodeList list = root.getChildNodes();
+		ArrayList<ArrayList<AbstractElement>> array;
+		ArrayList<Operator> operators = new ArrayList<>();
+		ArrayList<Attack> attacks = new ArrayList<>();
+		
+		for (int temp = 0; temp < list.getLength(); temp++) {
+		    Node node = list.item(temp);
+		    if (node.getNodeType() == Node.ELEMENT_NODE) {
+		        Element tmpE = (Element) node;
+		        array = this.getChildren(node);
+		        
+		        
+		        if (node.getNodeName().equals("operator")) {
+		        	 ArrayList<Attack> listAttack = new ArrayList<>();
+		             for(AbstractElement ae : array.get(1)) {
+		             	if(ae instanceof Attack) {
+		             		listAttack.add((Attack) ae);
+		             	}
+		             }
+		      
+		            Operator op = new Operator(getTypeFromString(tmpE.getAttribute("type")), listAttack);
+		            for(Attack a : listAttack) {
+                    	a.setFather(op);                    
+                    }
+		            operators.add(op);
+		            
+		        } else if (node.getNodeName().equals("attack")) {
+		        	
+		        	ArrayList<Operator> listOperator = new ArrayList<>();
+		             for(AbstractElement ae : array.get(0)) {
+		             	if(ae instanceof Operator) {
+		             		listOperator.add((Operator) ae);
+		             	}
+		             }
+		        	ArrayList<Attack> listAttack = new ArrayList<>();
+		             for(AbstractElement ae : array.get(1)) {
+		             	if(ae instanceof Attack) {
+		             		listAttack.add((Attack) ae);
+		             	}
+		             }
+		             
+		         	Attack at = new Attack(tmpE.getAttribute("name"), listOperator, listAttack);
+		         	 for(Operator o : listOperator) {
+	                    	at.setFather(o);                    
+	                    }
+		         	 for(Attack a : listAttack) {
+	                    	at.setFather(a);                    
+	                    }
+		            attacks.add(at);
+		            
+		        }
+		    }
+		}
+		return new Attack(root.getAttribute("name"), operators, attacks);
 	}
 	
     private ArrayList<ArrayList<AbstractElement>> getChildren(Node n) throws Exception {
+    	
         NodeList list = n.getChildNodes();
         ArrayList<ArrayList<AbstractElement>> array;
         ArrayList<AbstractElement> operators = new ArrayList<>();
         ArrayList<AbstractElement> attacks = new ArrayList<>();
+        
         for (int temp = 0; temp < list.getLength(); temp++) {
             Node node = list.item(temp);
             array = this.getChildren(node);
             if (node.getNodeType() == Node.ELEMENT_NODE) {
+            	
                 Element tmpE = (Element) node;
+                
                 if (node.getNodeName().equals("operator")) {
                 	ArrayList<Attack> listAttack = new ArrayList<>();
                 	
@@ -269,7 +300,11 @@ public class AttackTreeAdapter implements IAdapter {
                     }
                     
                     Operator op = new Operator(getTypeFromString(tmpE.getAttribute("type")), listAttack);
+                    for(Attack a : listAttack) {
+                    	a.setFather(op);                    
+                    }
                     operators.add(op);
+                    
                 } else if (node.getNodeName().equals("attack")) {
                 	
                  	ArrayList<Operator> listOperator = new ArrayList<>();
@@ -286,10 +321,19 @@ public class AttackTreeAdapter implements IAdapter {
                      }
                      
                     Attack at = new Attack(tmpE.getAttribute("name"), listOperator, listAttack);
+                   
+                    for(Attack a : listAttack) {
+                    	a.setFather(at);                    
+                    }
+                    for(Operator o : listOperator) {
+                    	o.setFather(at);                    
+                    }
                     attacks.add(at);
+                    
                 }
             }
         }
+        
         ArrayList<ArrayList<AbstractElement>> ret = new ArrayList<>();
         ret.add(operators);
         ret.add(attacks);
