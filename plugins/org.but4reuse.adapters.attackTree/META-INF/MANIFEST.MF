@@ -4,12 +4,9 @@ Bundle-Name: Adapter Attack Tree
 Bundle-SymbolicName: org.but4reuse.adapters.attackTree;singleton:=true
 Bundle-Version: 1.0.0.qualifier
 Bundle-Activator: org.but4reuse.adapters.attackTree.activator.Activator
-Require-Bundle: org.eclipse.ui,
- org.eclipse.core.runtime,
+Require-Bundle: org.eclipse.core.runtime,
  org.but4reuse.adapters,
  org.but4reuse.utils
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-ActivationPolicy: lazy
-Bundle-ClassPath: libs/blueprints-core-2.6.0.jar,
- .
-Bundle-Vendor: BUT4Reuse
+Bundle-ClassPath: .

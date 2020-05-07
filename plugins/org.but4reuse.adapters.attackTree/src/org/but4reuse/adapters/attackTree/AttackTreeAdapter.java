@@ -1,34 +1,31 @@
 package org.but4reuse.adapters.attackTree;
 
-import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
-
 import java.util.List;
-import java.util.UUID;
 
-import org.but4reuse.adapters.IAdapter;
-import org.but4reuse.adapters.IElement;
-import org.but4reuse.adapters.impl.AbstractElement;
-import org.but4reuse.utils.files.FileUtils;
-import org.eclipse.core.runtime.IProgressMonitor;
-
-import org.w3c.dom.*;
-import org.xml.sax.SAXException;
-
-import com.tinkerpop.blueprints.util.io.graphml.GraphMLReader;
-
-import javax.xml.parsers.*;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+
+import org.but4reuse.adapters.IAdapter;
+import org.but4reuse.adapters.IElement;
+import org.but4reuse.adapters.impl.AbstractElement;
+import org.but4reuse.utils.files.FileUtils;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 
 /**
@@ -53,7 +50,7 @@ public class AttackTreeAdapter implements IAdapter {
 	}
 
 	/**
-	 * Read the graph file
+	 * Read the graph file to adapt
 	 */
 	@Override
 	public List<IElement> adapt(URI uri, IProgressMonitor monitor) {
@@ -70,7 +67,10 @@ public class AttackTreeAdapter implements IAdapter {
 			Document document = builder.parse(file);
 			Element root = document.getDocumentElement();
 			
+			// Convert the xml to an attack
 			Attack attack = convertTree(root);
+			
+			// Get all elements in this attack
 			elements = attack.getAllSubElements();
 			
 			
@@ -93,30 +93,26 @@ public class AttackTreeAdapter implements IAdapter {
 	@Override
 	public void construct(URI uri, List<IElement> elements, IProgressMonitor monitor) {
 		
-		
+		// On récupère la liste de toutes les attaques afin de créer un seul et même arbre.
 		ArrayList<Attack> attacks = new ArrayList<>();
-		ArrayList<Operator> operators = new ArrayList<>();
-		
-		
 		
 		for(IElement element : elements)
 			if (element instanceof Attack)
 				attacks.add((Attack) element);
-			else if(element instanceof Operator)
-				operators.add((Operator)element);
 		
 		System.out.println("======== Liste des attaques à ajouter =============");
-		for(Attack a : attacks) {
+		for(Attack a : attacks) 
 			System.out.println(a);
-		}
-		System.out.println("======== FIN =============\n");
-		
+		System.out.println("======== Fin de la liste des attaques à ajouter ============\n");
 		
 		
 		try {
 			
+			// Notre attaque de sortie (celle qui contiendra tous les élements dans un et même seul arbre)
 			Attack attack = null;
 			
+			// On commence par récupérer dans la liste la première attaque qui ne possède pas de père
+			// (on en déduit que c'est notre attaque root)
 			for(Attack a : attacks) {
 				if(a.getFather() == null) {
 					attack = new Attack(a.getName());
@@ -126,55 +122,26 @@ public class AttackTreeAdapter implements IAdapter {
 					
 				
 			}
+			
+			// Si jamais on ne trouve pas d'attaque avec un père qui est nulle alors on prend par défaut la 
+			// prémière attaque de la liste d'élements.
 			if (attack == null) {
 				attack = new Attack(attacks.get(0).getName());
 				attacks.remove(0);
 			}
-				
-	
 			
-			int cpt = 0;
-			for(Attack a : attacks) {
-				cpt++;
-				System.out.println("AJOUT N°"+cpt);
+			// A ce moment la notre attaque de sortie contient un seul attribut : son nom. Rien d'autre.
+				
+			// On vient itérer sur le reste de la liste d'éléments pour ajouter l'une après l'autre les attaques qui ensemble constitueront 
+			// l'arbre.
+			for(Attack a : attacks)
 				addAttack(attack, a);
-				System.out.println("\n\nFIN AJOUT N°"+cpt);
-				
-
-			}
 			
-			System.out.println("\n======== On est vers la fin =============");
-			System.out.println("AVANT DE PRENDRE ROOT ATTACK : "+attack);
+			
+			// On vient chercher ensuite la racine de l'attaque.
 			attack = attack.getRoot();
-			System.out.println("ROOT ATTACK : "+attack);
 			
-		/*	
-			Attack attack = attacks.get(0);
-			cutAttack(attack, attacks);
-			attacks.remove(0);
-			
-			
-			ArrayList<Attack> listAttackAlreadyPresent = new ArrayList<>();
-			for(Attack a : attacks) {
-				if (isÄlreadyPresent(a,attack))
-						listAttackAlreadyPresent.add(a);
-			}
-			
-			System.out.println(attacks.size());
-			for(Attack a : listAttackAlreadyPresent)
-				attacks.remove(a);
-			System.out.println(attacks.size());
-			
-			for(Attack a : attacks) {
-				addAttack(attack,a);
-			}
-			
-			attack = attack.getRoot();
-			System.out.println("ROOT ATTACK : "+attack);
-			*/
-			
-		
-			
+			// Puis on construit le fichier xml a partir de l'objet 'attack'
 
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder builder;
@@ -200,14 +167,11 @@ public class AttackTreeAdapter implements IAdapter {
 	        }
 	        
 	        for(Operator o : attack.getOperatorChildren()) {
-	        	  Element operator = document.createElement("operator");
-	        	  operator.setAttribute("type", "" + o.type);
-		            root.appendChild(operator);
-		            for(Attack op : o.getChildren()) {
-		            	addChildToXML(op,operator,document);
-		            }
-	            	
-		         
+	        	Element operator = document.createElement("operator");
+	        	operator.setAttribute("type", "" + o.type);
+	        	root.appendChild(operator);
+				for(Attack op : o.getChildren())
+					addChildToXML(op,operator,document);     	      
 	        }
 	        
 	    	// Use the given file or use a default name if a folder was given
@@ -219,8 +183,6 @@ public class AttackTreeAdapter implements IAdapter {
 			File file = FileUtils.getFile(uri);
 			FileUtils.createFile(file);
 	
-
-	
 	        Transformer transformer = TransformerFactory.newInstance().newTransformer();
 	        DOMSource source = new DOMSource(document);
 	        StreamResult sortie = new StreamResult(file);
@@ -230,6 +192,7 @@ public class AttackTreeAdapter implements IAdapter {
 	        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
 	        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
 	        transformer.transform(source, sortie);
+	        
 		}
 		catch(TransformerException e) {
 			e.printStackTrace();
@@ -271,8 +234,14 @@ public class AttackTreeAdapter implements IAdapter {
         }
     }
 	
+    /**
+     * Converts the xml file from the root element to an attack object.
+     * 
+     * @param root the root element.
+     * @return the attack object.
+     * @throws Exception throws exception
+     */
 	private Attack convertTree(Element root) throws Exception {
-		String id_tree = UUID.randomUUID().toString();
 		
 		Attack attack =  new Attack(root.getAttribute("name"));
 		
@@ -288,7 +257,7 @@ public class AttackTreeAdapter implements IAdapter {
 		        
 		        if (node.getNodeName().equals("operator")) {
 		        	 ArrayList<Attack> listAttack = new ArrayList<>();
-		        	 array = this.getChildren(node,id_tree);
+		        	 array = this.getChildren(node);
 		             for(AbstractElement ae : array.get(1)) {
 		             	if(ae instanceof Attack) {
 		             		listAttack.add((Attack) ae);
@@ -303,7 +272,7 @@ public class AttackTreeAdapter implements IAdapter {
 		            operators.add(op);
 		            
 		        } else if (node.getNodeName().equals("attack")) {
-		        	array = this.getChildren(node, id_tree);
+		        	array = this.getChildren(node);
 		        	ArrayList<Operator> listOperator = new ArrayList<>();
 		             for(AbstractElement ae : array.get(0)) {
 		             	if(ae instanceof Operator) {
@@ -335,7 +304,14 @@ public class AttackTreeAdapter implements IAdapter {
 		return attack;
 	}
 	
-    private ArrayList<ArrayList<AbstractElement>> getChildren(Node n, String id_tree) throws Exception {
+	/**
+	 * Get the list of children of a node.
+	 * 
+	 * @param n the node 
+	 * @return the list of children of a node
+	 * @throws Exception throws Exception
+	 */
+    private ArrayList<ArrayList<AbstractElement>> getChildren(Node n) throws Exception {
     	
         NodeList list = n.getChildNodes();
         ArrayList<ArrayList<AbstractElement>> array;
@@ -344,7 +320,7 @@ public class AttackTreeAdapter implements IAdapter {
         
         for (int temp = 0; temp < list.getLength(); temp++) {
             Node node = list.item(temp);
-            array = this.getChildren(node, id_tree);
+            array = this.getChildren(node);
             if (node.getNodeType() == Node.ELEMENT_NODE) {
             	
                 Element tmpE = (Element) node;
@@ -421,120 +397,103 @@ public class AttackTreeAdapter implements IAdapter {
         }
     }
     
-    private boolean isÄlreadyPresent(Attack attack, Attack main) throws Exception {
     
-    	
-    	// on remonte jusqu'au root de attack
-    	Attack root = main.getRoot();
-    	if(root != null) {
-    		
-    		if(((Attack)root).getName().equals(attack.getName()))
-				return true;
-			
-			for(IElement element : ((Attack)root).getAllSubElements()) {
-				if(element instanceof Attack) {
-					if(((Attack)element).getName().equals(attack.getName()))
-						return true;
-				}
-				
-			}
-    	}
-
-    	return false;
-    	
-    	
-    }
-    
+    /**
+     * Method which makes it possible to know whether an attack or an operator 
+     * is present in the child elements of an attack or an operator.
+     * 
+     * @param e the attack or the operator to find to an another attack
+     * @param main the attack in which the attacking object or operator is potentially sought.
+     * 
+     * @return the element sought in the main attack
+     * @throws Exception throws Exception
+     */
     private AbstractElement elementAlreadyPresent(AbstractElement e, Attack main) throws Exception {
     	
     	
     	// on remonte jusqu'au root de attack
     	Attack root = main.getRoot();
-    	System.out.println("\n======== ELEMENT ALREADY PRESENT ==========");
-    	System.out.println(e);
-    	System.out.println("IN");
-    	System.out.println(root);
+    	
+    	// on vérifie que l'attaque root n'est pas nulle, sinon erreur.
     	if(root != null) {
     		
+    		// Si l'élément que l'on recherche est une Attack alors on commence par vérifier si cette attaque n'est pas 
+    		// l'attaque le root de l'attaque main directement si c'est le cas alors on renvoie le root 
     		if (e instanceof Attack)
 	    		if(((Attack)root).getName().equals(((Attack)e).getName()))
 					return root;
 
-			
+			// Sinon on parcourt l'ensemble des sous éléments de l'attaque root à la recherche de l'attaque ou de l'opérateur 'e' que l'on cherche
 			for(IElement element : ((Attack)root).getAllSubElements()) {
 				
-				System.out.println("Iterateur sur element : "+ element);
-				
-				
+				// On regarde tout d'abord si 'e' et l'element dans notre iterateur sont tous les deux des attaques
+				// si c'est le cas et que les noms des attaques sont identiques alors on a trouver l'élément et on renvoi la réponse
 				if(e instanceof Attack && element instanceof Attack)
 					if(((Attack)element).getName().equals(((Attack)e).getName()))
 						return (AbstractElement) element;
-					
+				
+				// Sinon on regarde si 'e' et l'élement dans notre itérateur sont tous les deux des opérateurs
 				if(element instanceof Operator && e instanceof Operator) {
-					// si les deux opérateurs sont du même types 
+					
+					// si les deux opérateurs sont du même types (ex: OR = OR; AND = AND)
 					if(((Operator) e).getOperatorType() == ((Operator) element).getOperatorType())
-						System.out.println("type operator OK");
-						System.out.println(((Operator) element).getFather());
-						System.out.println(((Operator) e).getFather());
-						if(((Operator)element).getFather() != null && (((Operator)e).getFather() != null)) {
-							if(((Operator)element).getFather().getName().equals(((Operator)e).getFather().getName())) {
-								System.out.println("operator identique");
-								return (AbstractElement) element;
-							}
-								
-							else
-								System.out.println("type operator OK");
-						}
-						else
-							System.out.println("erreur pere operator");
+						
+						// si les parents ne sont pas nulles et que les parents portent le même nom alors on a trouver l'élément et on renvoi la 
+						// réponse
+						if(((Operator)element).getFather() != null && (((Operator)e).getFather() != null))
+							if(((Operator)element).getFather().getName().equals(((Operator)e).getFather().getName()))
+								return (AbstractElement) element;	
 							
 				}
 					
-				
-				
 			}
     	}
 
     	return null;
-    	
-    	
+    		
     }
     
-    
+    /**
+     * Allows you to add an attack to another attack.
+     * 
+     * @param main the attack in which one should include an attack
+     * @param leaf the attack that should be included
+     * @throws Exception throws Exception
+     */
     private void addAttack(Attack main, Attack leaf) throws Exception {
     	
-    	
+    	// création d'un nouvel objet attaque qui possède comme attribut uniqueme le nom de l'attaque
     	AbstractElement newAttack = new Attack(leaf.getName());
     	
     	System.out.println("\nOn souhaite ratacher ");
     	System.out.println(newAttack);
-    	System.out.println("dans l'abre :");
+    	System.out.println("dans l'arbre :");
     	System.out.println(main);
     	
     	// on récupère le parent de la feuille a insérer
     	AbstractElement father = leaf.getFather();
     	System.out.println("Père de "+leaf.getName()+" = " + father);
+    	
     	// on regarde si le parent est déja dans l'arbre principal
     	AbstractElement res = elementAlreadyPresent(father,main);
     	System.out.println("1. "+res);
     	
     	// tant que l'on ne retrouve pas de parent on remonte sur les parents de la feuille
     	// en veillant a ajouté à newAttack un père
-    	int compteur = 1;
     	while(res == null && father != null) {
     		
     		if (father instanceof Attack) {
     			if (newAttack instanceof Attack) {
     				((Attack) newAttack).setFather(new Attack(((Attack) father).getName()));
         			Attack f = (Attack) ((Attack) newAttack).getFather();
-        			f.addAttackChildren((Attack) newAttack);
+        			f.addChildAttack((Attack) newAttack);
         			newAttack = f;
         			father = ((Attack) father).getFather();
     			}
     			else if(newAttack instanceof Operator) {
     				((Operator) newAttack).setFather(new Attack(((Attack) father).getName()));
         			Attack f = (Attack) ((Operator) newAttack).getFather();
-        			f.addOperatorChildren((Operator) newAttack);
+        			f.addChildOperator((Operator) newAttack);
         			newAttack = f;
         			father = ((Attack) father).getFather();
     			}
@@ -545,43 +504,51 @@ public class AttackTreeAdapter implements IAdapter {
     			if (newAttack instanceof Attack) {
     				((Attack) newAttack).setFather(new Operator(((Operator) father).getOperatorType()));
         			Operator o = (Operator) ((Attack) newAttack).getFather();
-        			o.addAttackChildren((Attack) newAttack);
+        			o.addChildAttack((Attack) newAttack);
         			newAttack = o;
         			father = ((Operator) father).getFather();
     			}
 
     		}
     		
-    		System.out.println("Compteur "+compteur+" : "+father);
-    		
     		if(father != null)
     			res = elementAlreadyPresent(father,main);
     	}
     	
-    	System.out.println(res);
-    	System.out.println("Noeud a rajouter : "+newAttack);
-    	if(newAttack instanceof Operator)
-    		System.out.println(((Operator) newAttack).getChildren());
-    	
-    	if (father != null) {
 
+    	System.out.println("Noeud a rajouter : "+newAttack);
+
+    	// a ce moment la on connait l'endroit dans l'attaque on l'on doit ajouter 'newAttack' (l'attaque)
+    	// res = endroit on ajouter l'attaque 
+    	// on doit donc définir 
+    	// 1. pour newAttack son parent, ici res 
+    	// 2. pour res un nouvel enfant, ici newAttack
+    	// ATTENTION, il faut vérifier si c'est des Operator ou des Attacks qui sont traités
+    	if (father != null) {
+    		
+    		// Si on doit ajouter une attaque 
     		if (newAttack instanceof Attack) {
+    			// dans un enfant d'attaque
     			if(res instanceof Attack) {
-    				((Attack)res).addAttackChildren((Attack) newAttack);
+    				((Attack)res).addChildAttack((Attack) newAttack);
     				((Attack) newAttack).setFather(res);
     			}
+    			// dans un enfant d'operator
     			else if (res instanceof Operator) {
-    				((Operator)res).addAttackChildren((Attack) newAttack);
+    				((Operator)res).addChildAttack((Attack) newAttack);
     				((Attack) newAttack).setFather(res);
     			}
     		}
+    		// Si on doit ajouter un Operator
     		else if(newAttack instanceof Operator) {
+    			// dans un enfant d'attaque
     			if(res instanceof Attack) {
-    				((Attack)res).addOperatorChildren((Operator) newAttack);
+    				((Attack)res).addChildOperator((Operator) newAttack);
     				((Operator) newAttack).setFather((Attack) res);
     			}
+    			// erreur car un objet Operator a forcement un parent attaque
     			else if (res instanceof Operator) {
-    				System.out.println("erreur");
+    				throw new Exception("Erreur dans l'intégration d'un nouvel élement dans l'attaque principal");
     			}
     		}
     		
@@ -589,171 +556,7 @@ public class AttackTreeAdapter implements IAdapter {
     	}
     	else
     		throw new Exception("Impossible de créer un arbre avec ces données");
-    	/*
-    	
-    	AbstractElement father = leaf.getFather();
-    	
-    	
-    	
-    	
-    	int cpt = 1;
-    	
-    	AbstractElement node = elementÄlreadyPresent(father,main);
-    	while(node == null && father != null) {
-    		
-    		
-    		cpt++;
-    		if (father instanceof Attack) {
-    			if (newAttack instanceof Attack) {
-    				((Attack) newAttack).setFather(new Attack(((Attack) father).getName()));
-        			Attack f = (Attack) ((Attack) newAttack).getFather();
-        			f.addAttackChildren((Attack) newAttack);
-        			newAttack = f;
-        			father = ((Attack) father).getFather();
-    			}
-    			else if(newAttack instanceof Operator) {
-    				((Operator) newAttack).setFather(new Attack(((Attack) father).getName()));
-        			Attack f = (Attack) ((Operator) newAttack).getFather();
-        			f.addOperatorChildren((Operator) newAttack);
-        			newAttack = f;
-        			father = ((Attack) father).getFather();
-    			}
-    			
-    		}
-    		else if (father instanceof Operator) {
-    			
-    			if (newAttack instanceof Attack) {
-    				((Attack) newAttack).setFather(new Operator(((Operator) father).getOperatorType()));
-        			Operator o = (Operator) ((Attack) newAttack).getFather();
-        			o.addAttackChildren((Attack) newAttack);
-        			newAttack = o;
-        			father = ((Operator) father).getFather();
-    			}
-
-    		}
-    		
-    		if(father != null)
-    			node = elementÄlreadyPresent(father,main);
-
-    			
-    	}
-    	
-    	
-    	
-    	if (father != null) {
-    		System.out.println("nb de parent avant repique sur arbre : "+cpt);
-    		System.out.println(newAttack);
-    		System.out.println("NODE "+node);
-
-    		if (newAttack instanceof Attack) {
-    			if(node instanceof Attack) {
-    				((Attack)node).addAttackChildren((Attack) newAttack);
-    			}
-    			else if (node instanceof Operator) {
-    				((Operator)node).addAttackChildren((Attack) newAttack);
-    			}
-    		}
-    		else if(newAttack instanceof Operator) {
-    			if(node instanceof Attack) {
-    				((Attack)node).addOperatorChildren((Operator) newAttack);
-    			}
-    			else if (node instanceof Operator) {
-    				System.out.println("erreur");
-    			}
-    		}
-    		
-    		
-    	}
-    	else
-    		System.out.println("erreur");
-    		
-    		*/
     	
     }
     
-
-    
-    
-    private void cutAttack(Attack attack, ArrayList<Attack> attacks) throws Exception {
-    	
-    	Attack root = attack.getRoot();
-    	if(root != null) {
-    		
-    		ArrayList<IElement> notFoundList = new ArrayList<>();
-    		
-
-	    	for(IElement element : ((Attack)root).getAllSubElements()) {
-	    		boolean found = false;
-	    		if(element instanceof Attack) {
-	    			for(Attack a : attacks) {
-	    				if(((Attack)element).getName().equals(a.getName())) {
-	    					found = true;
-	    					break;
-	    				}
-	        		}
-					
-				}
-	    		if(!found && element instanceof Attack) {
-	    			System.out.println(element);
-	    			notFoundList.add(element);
-	    		}
-	    				
-				
-			}
-	    	
-	    /*	
-	    	for(Attack a : attacks) {
-				if(((Attack)root).getName().equals(a.getName())) {
-					notFoundList.add(root);
-					break;
-				}
-    		}
-	    	*/
-	    	
-	    	
-	    	for(IElement a : notFoundList) {
-	    		
-	    		if(a instanceof Attack) {
-	    			AbstractElement father = ((Attack)a).getFather();
-	    			if(father != null && father instanceof Attack) {
-	    				((Attack) father).getAttackChildren().remove(a);
-	    				((Attack) a).setFather(null);
-	    			}
-	    			else if (father != null && father instanceof Operator) {
-	    				((Operator) father).getChildren().remove(a);
-	    				((Attack) a).setFather(null);
-	    			}
-	    			else if (father == null) {
-	    				for(Attack attackChild : ((Attack) a).getAttackChildren())
-	    					attackChild.setFather(null);
-	    				for(Operator operatorChild : ((Attack) a).getOperatorChildren())
-	    					operatorChild.setFather(null);
-	    				
-	    			}
-	    		}
-	    		else if(a instanceof Operator) {
-	    			Attack father = ((Operator) a).getFather();
-	    			if (father != null) {
-		    			father.getOperatorChildren().remove(a);
-		    			((Operator) a).setFather(null);
-	    			}
-	    			else {
-	    				for(Attack attackChild : ((Operator) a).getChildren())
-	    					attackChild.setFather(null);
-	    				
-	    			}
-	    		}
-	    		
-	    	}
-	    	
-	    	System.out.println("Number elements to delete : "+notFoundList.size());
-    	}
-    	
-    }
-    
-
-    
-    
-    
-
 }
