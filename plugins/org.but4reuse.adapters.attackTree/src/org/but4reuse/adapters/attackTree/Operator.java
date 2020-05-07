@@ -22,7 +22,13 @@ public class Operator extends AbstractElement {
      */
     public ArrayList<Attack> children;
     
-    private AbstractElement father;
+    private Attack father;
+    
+    
+    public Operator(OperatorType type){
+    	this.type = type;
+        this.children = new ArrayList<Attack>();
+    }
    
 
     /**
@@ -32,7 +38,7 @@ public class Operator extends AbstractElement {
      * @throws Exception
      */
     public Operator(OperatorType type, ArrayList<Attack> children){
-        this.type = type;
+    	this.type = type;
         this.children = children;
     }
     
@@ -40,12 +46,17 @@ public class Operator extends AbstractElement {
     	this.children.add(attack);
     }
     
-    public void setFather(AbstractElement e) {
+    public void setFather(Attack e) {
     	father = e;
     }
     
-    public AbstractElement getFather() {
+    public Attack getFather() {
     	return father;
+    }
+    
+    
+    public OperatorType getOperatorType() {
+    	return this.type;
     }
     
     @Override
@@ -53,6 +64,7 @@ public class Operator extends AbstractElement {
         return "Operator{" +
                 "type=" + type +
                 ", children=" + children.size() +
+                ", father= "+father +
                 '}';
     }
 
@@ -60,19 +72,24 @@ public class Operator extends AbstractElement {
 	public double similarity(IElement anotherElement) {
 		if(anotherElement instanceof Operator) {
 			Operator anOperator = (Operator)anotherElement;
-
-			if(anOperator.getChildren().size() == this.children.size()) {
-				int cpt = 0;
-				for(Attack attack : this.children) {
-					for(Attack other : anOperator.getChildren()) {
-						if(attack.equals(other))
-							cpt++;
-					}
-				}
-				if(cpt == this.children.size())
+			
+			if(anOperator.getFather().getName().equals(this.father.getName()))
+				if(anOperator.getOperatorType() == type)
 					return 1;
-				
-			}
+				/*
+				if(anOperator.getChildren().size() == this.children.size()) {
+					int cpt = 0;
+					for(Attack attack : this.children) {
+						for(Attack other : anOperator.getChildren()) {
+							if(attack.equals(other))
+								cpt++;
+						}
+					}
+					if(cpt == this.children.size() || (cpt > 0 && cpt <= this.children.size()))
+						return 1;
+						
+					
+				}*/
 		}
 		return 0;
 	}

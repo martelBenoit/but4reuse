@@ -18,6 +18,7 @@ public class Attack extends AbstractElement{
     private String name;
     
     private AbstractElement father;
+    
 
     /**
      * The list of the operators in the attack
@@ -37,9 +38,14 @@ public class Attack extends AbstractElement{
      * @throws Exception
      */
     public Attack(String name, ArrayList<Operator> operatorChildren, ArrayList<Attack> attackChildren) throws Exception {
-        this.name = name;
+    	this.name = name;
         this.operatorChildren = operatorChildren;
         this.attackChildren = attackChildren;
+    }
+    
+    public Attack() throws Exception {
+        this.operatorChildren = new ArrayList<Operator>();
+        this.attackChildren = new ArrayList<Attack>();
     }
     
     public Attack(String name) throws Exception {
@@ -47,6 +53,7 @@ public class Attack extends AbstractElement{
         this.operatorChildren = new ArrayList<Operator>();
         this.attackChildren = new ArrayList<Attack>();
     }
+    
 
 
     @Override
@@ -55,8 +62,7 @@ public class Attack extends AbstractElement{
                 "name='" + name + '\'' +
                 ", OperatorChildren=" + operatorChildren.size() +
                 ", AttackChildren=" + attackChildren.size() +
-                ", father= "+father +
-                '}';
+                ", father= "+father +'}';
     }
 
 	@Override
@@ -72,6 +78,10 @@ public class Attack extends AbstractElement{
 	
 	public String getName() {
 		return this.name;
+	}
+	
+	public void setName(String name) {
+		this.name = name;
 	}
 
 	@Override
@@ -96,6 +106,14 @@ public class Attack extends AbstractElement{
 		return this.attackChildren;
 	}
 	
+	public void setOperatorChildren(ArrayList<Operator> operators){
+		this.operatorChildren = operators;
+	}
+	
+	public void setAttackChildren(ArrayList<Attack> attacks){
+		this.attackChildren = attacks;
+	}
+	
 	public void setFather(AbstractElement e) {
 		this.father = e;
 	}
@@ -103,10 +121,32 @@ public class Attack extends AbstractElement{
 	public List<IElement> getAllSubElements(){
 		ArrayList<IElement> elements = new ArrayList<>();
 		elements = printFromModel(this,elements);
-		System.out.println("nb total "+elements.size());
 		return elements;
 		
 	}
+	
+	public Attack getRoot() throws Exception {
+		
+	
+		AbstractElement tmp = this;
+    	AbstractElement root = null;
+    	while(tmp != null) {
+    		root = tmp;
+    		if (tmp instanceof Attack)
+    			tmp = ((Attack)tmp).getFather();
+    		else if (tmp instanceof Operator)
+    			tmp = ((Operator)tmp).getFather();
+    		else
+    			throw new Exception("Invalid object");	
+    	}
+    	
+    	
+    	if(root != null && root instanceof Attack)
+    		return (Attack)root;
+    	else
+    		return null;
+	}
+	
 	
 	 public ArrayList<IElement> printFromModel(AbstractElement element, ArrayList<IElement> elements) {
 		 elements.add(element);
